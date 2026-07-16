@@ -1,0 +1,1 @@
+const s=t=>String(t||"").trim().toUpperCase(),a=/^[A-HJ-NP-Z2-9]{6}$/,n=t=>{const e=s(t);return a.test(e)?e:""},c=t=>{const e=n(t);if(e)return e;try{const r=new URL(t).pathname.split("/").filter(Boolean);return r.length>=2&&r[0].toLowerCase()==="join"?n(r[1]):""}catch{return""}};export{c as a,n as e,s as n};
