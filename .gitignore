@@ -1,0 +1,8 @@
+node_modules/
+client/node_modules/
+server/node_modules/
+client/dist/
+server/data/got-five.sqlite
+*.log
+.env
+.DS_Store

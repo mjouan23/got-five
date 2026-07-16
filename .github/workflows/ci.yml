@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: npm ci --prefix client
+
+      - name: Install server dependencies
+        run: npm ci --prefix server
+
+      - name: Build client
+        run: npm run build
+
+      - name: Start backend
+        run: npm run start --prefix server &
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:3000/api/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend did not start in time"
+          exit 1
+
+      - name: Run API E2E
+        run: npm run test:e2e:api
+
+      - name: Run Socket E2E
+        run: npm run test:e2e:socket
