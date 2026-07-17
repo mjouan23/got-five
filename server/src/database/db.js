@@ -1,12 +1,82 @@
 import fs from 'fs';
 import path from 'path';
-import Database from 'better-sqlite3';
+import initSqlJs from 'sql.js';
 import { env } from '../config/env.js';
 
 const sqlitePath = path.resolve(process.cwd(), env.SQLITE_PATH);
 fs.mkdirSync(path.dirname(sqlitePath), { recursive: true });
 
-export const db = new Database(sqlitePath);
+const sqlWasmPath = path.resolve(process.cwd(), 'node_modules/sql.js/dist/sql-wasm.wasm');
+const SQL = await initSqlJs({
+  locateFile: () => sqlWasmPath
+});
+
+const initialBuffer = fs.existsSync(sqlitePath) ? fs.readFileSync(sqlitePath) : undefined;
+const sqliteDb = initialBuffer ? new SQL.Database(initialBuffer) : new SQL.Database();
+
+const persistDatabase = () => {
+  const data = sqliteDb.export();
+  fs.writeFileSync(sqlitePath, Buffer.from(data));
+};
+
+const normalizeParams = (args) => {
+  if (args.length === 1) {
+    const value = args[0];
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value;
+    }
+    return [value];
+  }
+  return args;
+};
+
+const toStatement = (sql) => {
+  const statement = sqliteDb.prepare(sql);
+
+  return {
+    run(...args) {
+      statement.bind(normalizeParams(args));
+      while (statement.step()) {
+        // Consume potential result rows for compatibility with write statements.
+      }
+      statement.reset();
+
+      const changes = sqliteDb.getRowsModified();
+      persistDatabase();
+      return { changes };
+    },
+    get(...args) {
+      statement.bind(normalizeParams(args));
+      const hasRow = statement.step();
+      const row = hasRow ? statement.getAsObject() : undefined;
+      statement.reset();
+      return row;
+    },
+    all(...args) {
+      statement.bind(normalizeParams(args));
+      const rows = [];
+      while (statement.step()) {
+        rows.push(statement.getAsObject());
+      }
+      statement.reset();
+      return rows;
+    }
+  };
+};
+
+export const db = {
+  exec(sql) {
+    sqliteDb.exec(sql);
+    persistDatabase();
+  },
+  prepare(sql) {
+    return toStatement(sql);
+  },
+  pragma() {
+    // No-op: sql.js runs in-process and does not expose SQLite pragma effects like file-backed drivers.
+  }
+};
+
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
