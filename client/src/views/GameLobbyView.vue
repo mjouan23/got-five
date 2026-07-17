@@ -10,7 +10,6 @@
       </div>
 
       <div class="stack">
-        <p>Code session: <strong>{{ currentCode }}</strong></p>
         <QrCodeBlock :value="joinUrl" />
 
         <div class="stack actions-inline">
