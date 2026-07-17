@@ -15,7 +15,7 @@ export const socketService = {
     }
 
     socket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       withCredentials: true,
       path: '/socket.io'
     });
