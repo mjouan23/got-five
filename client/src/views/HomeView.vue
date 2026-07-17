@@ -1,9 +1,7 @@
 <template>
   <section class="card hero stack">
     <img class="hero-logo" src="/logo.png" alt="Logo Got Five" />
-    <h2>Got Five!</h2>
-    <p>Jeu de societe multijoueur en temps reel sur smartphone.</p>
-    <InstallPrompt />
+    <h2>Meeplix</h2>
     <div class="stack actions">
       <RouterLink class="btn link-btn" to="/create">Creer une partie</RouterLink>
       <RouterLink class="btn secondary link-btn" to="/join">Rejoindre une partie</RouterLink>
@@ -13,7 +11,6 @@
 
 <script setup>
 import { RouterLink } from 'vue-router';
-import InstallPrompt from '../components/InstallPrompt.vue';
 </script>
 
 <style scoped>
@@ -34,11 +31,6 @@ import InstallPrompt from '../components/InstallPrompt.vue';
 h2 {
   margin: 0;
   font-size: 2rem;
-}
-
-p {
-  margin: 0;
-  color: var(--muted);
 }
 
 .actions {

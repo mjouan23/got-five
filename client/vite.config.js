@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo.png'],
       manifest: {
-        name: 'Got Five!',
-        short_name: 'Got Five!',
+        name: 'Meeplix',
+        short_name: 'Meeplix',
         description: 'Jeu de société multijoueur en temps réel',
         theme_color: '#07090c',
         background_color: '#07090c',

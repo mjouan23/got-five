@@ -3,7 +3,7 @@
     <div class="brand">
       <img class="logo" src="/logo.png" alt="Logo Got Five" />
       <div>
-        <h1>Got Five!</h1>
+        <h1>Meeplix</h1>
       </div>
     </div>
   </header>
