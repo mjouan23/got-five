@@ -3,7 +3,6 @@
     <div class="brand">
       <img class="logo" src="/logo.png" alt="Logo Got Five" />
       <div>
-        <p class="subtitle">Jeu multijoueur en temps reel</p>
         <h1>Got Five!</h1>
       </div>
     </div>
@@ -39,11 +38,5 @@
 h1 {
   margin: 0;
   font-size: 1.15rem;
-}
-
-.subtitle {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 </style>

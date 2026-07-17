@@ -4,7 +4,7 @@
       <div class="lobby-top">
         <img class="session-logo" src="/logo.png" alt="Logo Got Five" />
         <div>
-          <h2>Salon {{ currentCode }}</h2>
+          <h2>Session {{ currentCode }}</h2>
           <ConnectionStatus :status="socketState" />
         </div>
       </div>
@@ -24,10 +24,10 @@
     </article>
 
     <article class="card stack">
-      <h3>Joueurs connectes</h3>
+      <h3>Joueurs connectés</h3>
       <ul class="players">
         <li v-for="player in store.players" :key="player.id" class="player-row">
-          <span>{{ player.nickname }} <small>({{ player.role }})</small></span>
+          <span>{{ player.nickname }} <small>({{ roleLabel(player.role) }})</small></span>
           <span :class="player.connected ? 'online' : 'offline'">
             {{ player.connected ? 'En ligne' : 'Hors ligne' }}
           </span>
@@ -67,6 +67,16 @@ const publicUrl = useRuntimeOrigin
   ? window.location.origin
   : import.meta.env.VITE_PUBLIC_URL || window.location.origin;
 const joinUrl = computed(() => `${publicUrl.replace(/\/$/, '')}/join/${currentCode.value}`);
+
+const roleLabel = (role) => {
+  if (role === 'HOST') {
+    return 'Hote';
+  }
+  if (role === 'PLAYER') {
+    return 'Joueur';
+  }
+  return role;
+};
 
 const bindSocket = () => {
   const socket = socketService.connect();
