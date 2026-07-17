@@ -23,7 +23,14 @@ const normalizeParams = (args) => {
   if (args.length === 1) {
     const value = args[0];
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      return value;
+      const named = {};
+      for (const [key, paramValue] of Object.entries(value)) {
+        named[key] = paramValue;
+        named[`@${key}`] = paramValue;
+        named[`:${key}`] = paramValue;
+        named[`$${key}`] = paramValue;
+      }
+      return named;
     }
     return [value];
   }
@@ -31,34 +38,35 @@ const normalizeParams = (args) => {
 };
 
 const toStatement = (sql) => {
-  const statement = sqliteDb.prepare(sql);
-
   return {
     run(...args) {
+      const statement = sqliteDb.prepare(sql);
       statement.bind(normalizeParams(args));
       while (statement.step()) {
         // Consume potential result rows for compatibility with write statements.
       }
-      statement.reset();
+      statement.free();
 
       const changes = sqliteDb.getRowsModified();
       persistDatabase();
       return { changes };
     },
     get(...args) {
+      const statement = sqliteDb.prepare(sql);
       statement.bind(normalizeParams(args));
       const hasRow = statement.step();
       const row = hasRow ? statement.getAsObject() : undefined;
-      statement.reset();
+      statement.free();
       return row;
     },
     all(...args) {
+      const statement = sqliteDb.prepare(sql);
       statement.bind(normalizeParams(args));
       const rows = [];
       while (statement.step()) {
         rows.push(statement.getAsObject());
       }
-      statement.reset();
+      statement.free();
       return rows;
     }
   };
