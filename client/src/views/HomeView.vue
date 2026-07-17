@@ -16,11 +16,7 @@ import { RouterLink } from 'vue-router';
 <style scoped>
 .hero {
   text-align: center;
-  min-height: calc(100vh - 110px);
-  min-height: calc(100dvh - 110px);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  margin-top: 28px;
 }
 
 .hero-logo {
