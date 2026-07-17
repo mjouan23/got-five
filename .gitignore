@@ -4,5 +4,5 @@ server/node_modules/
 # client/dist/
 server/data/got-five.sqlite
 *.log
-.env
+.env.*
 .DS_Store
