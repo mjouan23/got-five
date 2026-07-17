@@ -20,6 +20,10 @@ export const registerSocketHandlers = (io, socket) => {
       io.to(roomName(code)).emit(SOCKET_EVENTS.PLAYER_CONNECTED, {
         playerId: result.player.id
       });
+      io.to(roomName(code)).emit(
+        SOCKET_EVENTS.SESSION_STATE,
+        sessionService.getSessionState(code)
+      );
     } catch (error) {
       socket.emit(SOCKET_EVENTS.SESSION_ERROR, { message: error.message });
     }
