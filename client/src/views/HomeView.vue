@@ -3,7 +3,7 @@
     <img class="hero-logo" src="/logo.png" alt="Logo Got Five" />
     <h2>Meeplix</h2>
     <div class="stack actions">
-      <RouterLink class="btn link-btn" to="/create">Creer une partie</RouterLink>
+      <RouterLink class="btn link-btn" to="/create">Créer une partie</RouterLink>
       <RouterLink class="btn secondary link-btn" to="/join">Rejoindre une partie</RouterLink>
     </div>
   </section>

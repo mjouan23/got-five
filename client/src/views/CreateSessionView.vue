@@ -1,6 +1,6 @@
 <template>
   <section class="card stack">
-    <h2>Creer une partie</h2>
+    <h2>Créer une partie</h2>
     <p>Saisissez votre pseudonyme pour devenir l'organisateur.</p>
 
     <form class="stack" @submit.prevent="create">
@@ -11,7 +11,7 @@
 
       <p v-if="error" class="error-text">{{ error }}</p>
       <button class="btn" type="submit" :disabled="loading">
-        {{ loading ? 'Creation...' : 'Creer la partie' }}
+        {{ loading ? 'Creation...' : 'Créer la partie' }}
       </button>
     </form>
   </section>

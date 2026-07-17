@@ -69,7 +69,7 @@ const joinUrl = computed(() => `${publicUrl.replace(/\/$/, '')}/join/${currentCo
 
 const roleLabel = (role) => {
   if (role === 'HOST') {
-    return 'Hote';
+    return 'Hôte';
   }
   if (role === 'PLAYER') {
     return 'Joueur';
