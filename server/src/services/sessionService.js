@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { readFileSync } from 'fs';
 import { env } from '../config/env.js';
 import { sessionRepository } from '../repositories/sessionRepository.js';
 import { playerRepository } from '../repositories/playerRepository.js';
@@ -10,6 +11,77 @@ import {
 } from '../utils/validation.js';
 import { AppError } from '../utils/errors.js';
 import { GAME_STATUS } from '../../../shared/game-status.js';
+const tilesData = JSON.parse(
+  readFileSync(new URL('../data/tiles.json', import.meta.url), 'utf-8')
+);
+
+const sessionTilesByPlayer = new Map();
+
+const shuffle = (items) => {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+  return copy;
+};
+
+const buildPlayerTiles = (players) => {
+  const tilesByColor = new Map();
+  for (const tile of tilesData) {
+    const color = tile.couleur;
+    const bucket = tilesByColor.get(color) || [];
+    bucket.push(tile);
+    tilesByColor.set(color, bucket);
+  }
+
+  const colors = [...tilesByColor.keys()];
+  if (colors.length < 5) {
+    throw new AppError('Configuration des tuiles invalide', 500);
+  }
+
+  const playerCount = players.length;
+  for (const color of colors) {
+    if ((tilesByColor.get(color) || []).length < playerCount) {
+      throw new AppError('Pas assez de tuiles pour démarrer la partie', 409);
+    }
+  }
+
+  const shuffledByColor = new Map();
+  for (const [color, bucket] of tilesByColor.entries()) {
+    shuffledByColor.set(color, shuffle(bucket));
+  }
+
+  const assignments = {};
+  for (const player of players) {
+    assignments[player.id] = [];
+  }
+
+  for (const color of colors) {
+    const bucket = shuffledByColor.get(color);
+    for (const player of players) {
+      const tile = bucket.pop();
+      assignments[player.id].push({
+        chiffre: tile.chiffre,
+        couleur: tile.couleur,
+        nombrePoints: tile.nombrePoints
+      });
+    }
+  }
+
+  return assignments;
+};
+
+const toHiddenTileBacksByPlayer = (tilesByPlayer) => {
+  const hidden = {};
+  for (const [playerId, tiles] of Object.entries(tilesByPlayer || {})) {
+    hidden[playerId] = (tiles || []).map((tile, index) => ({
+      id: `${playerId}-${index + 1}`,
+      couleur: tile.couleur
+    }));
+  }
+  return hidden;
+};
 
 const expirationDate = () => {
   const expires = new Date();
@@ -20,6 +92,7 @@ const expirationDate = () => {
 const createJoinUrl = (code) => `${env.PUBLIC_APP_URL.replace(/\/$/, '')}/join/${code}`;
 
 const getSessionAndPlayers = (session) => {
+  const playerTilesById = toHiddenTileBacksByPlayer(sessionTilesByPlayer.get(session.id) || {});
   const players = playerRepository.listBySession(session.id).map((player) => ({
     ...player,
     connected: Boolean(player.connected)
@@ -30,6 +103,7 @@ const getSessionAndPlayers = (session) => {
     createdAt: session.created_at,
     updatedAt: session.updated_at,
     players,
+    playerTilesById,
     maxPlayers: env.MAX_PLAYERS_PER_SESSION
   };
 };
@@ -188,6 +262,11 @@ export const sessionService = {
 
     playerRepository.remove(player.id);
     sessionRepository.touch(session.id, new Date().toISOString(), expirationDate());
+    const tiles = sessionTilesByPlayer.get(session.id);
+    if (tiles && tiles[player.id]) {
+      delete tiles[player.id];
+      sessionTilesByPlayer.set(session.id, tiles);
+    }
 
     return {
       removedPlayerId: player.id,
@@ -205,13 +284,22 @@ export const sessionService = {
       throw new AppError('Seul l\'organisateur peut démarrer la partie', 403);
     }
 
+    const players = playerRepository.listBySession(session.id);
+    if (players.length < 2) {
+      throw new AppError('Au moins 2 joueurs sont nécessaires pour démarrer', 409);
+    }
+
+    const assignedTiles = buildPlayerTiles(players);
+    sessionTilesByPlayer.set(session.id, assignedTiles);
+
     const now = new Date().toISOString();
     sessionRepository.updateStatus(session.id, GAME_STATUS.PLAYING, now);
     sessionRepository.touch(session.id, now, expirationDate());
 
     return {
       sessionCode: session.code,
-      status: GAME_STATUS.PLAYING
+      status: GAME_STATUS.PLAYING,
+      state: this.getSessionState(session.code)
     };
   },
 

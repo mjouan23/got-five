@@ -1,7 +1,7 @@
 <template>
   <section class="card hero stack">
     <img class="hero-logo" src="/logo.png" alt="Logo Got Five" />
-    <h2>Meeplix</h2>
+    <h2>Got five!</h2>
     <div class="stack actions">
       <RouterLink class="btn link-btn" to="/create">Créer une partie</RouterLink>
       <RouterLink class="btn secondary link-btn" to="/join">Rejoindre une partie</RouterLink>

@@ -11,12 +11,14 @@ export const useSessionStore = defineStore('session', {
     role: '',
     status: 'idle',
     players: [],
+    playerTilesById: {},
     gameStatus: 'LOBBY',
     error: ''
   }),
   getters: {
     isHost: (state) => state.role === 'HOST',
-    hasIdentity: (state) => Boolean(state.sessionCode && state.playerId && state.playerToken)
+    hasIdentity: (state) => Boolean(state.sessionCode && state.playerId && state.playerToken),
+    currentPlayerTiles: (state) => state.playerTilesById?.[state.playerId] || []
   },
   actions: {
     setError(message) {
@@ -53,12 +55,14 @@ export const useSessionStore = defineStore('session', {
       this.nickname = '';
       this.role = '';
       this.players = [];
+      this.playerTilesById = {};
       this.gameStatus = 'LOBBY';
       storageService.clear();
     },
     updateSessionState(payload) {
       this.sessionCode = payload.sessionCode;
       this.players = payload.players || [];
+      this.playerTilesById = payload.playerTilesById || {};
       this.gameStatus = payload.status;
     },
     async ensureSessionExists(code) {
