@@ -56,8 +56,8 @@
     </article>
 
     <article v-if="isPlaying" class="card stack playing-layout">
-      <ul v-if="playerTiles.length" class="tiles-grid">
-        <li v-for="tile in playerTiles" :key="tile.id" class="tile-card" :class="colorClass(tile.couleur)">
+      <ul class="tiles-grid">
+        <li v-for="tile in displayTiles" :key="tile.id" class="tile-card" :class="colorClass(tile.couleur)">
           <div class="tile-eyes" :class="eyeClass(tile.couleur)">
             <span class="eye eye-left" />
             <span class="eye eye-right" />
@@ -119,6 +119,15 @@ const canStartGame = computed(() => connectedPlayersCount.value >= 2);
 const isPlaying = computed(() => store.gameStatus === 'PLAYING');
 const playerTiles = computed(() => store.currentPlayerTiles);
 const colorOrder = ['vert', 'rose', 'bleu', 'rouge', 'orange'];
+const displayTiles = computed(() => {
+  if (playerTiles.value.length) {
+    return playerTiles.value;
+  }
+  return colorOrder.map((color, index) => ({
+    id: `placeholder-${color}-${index + 1}`,
+    couleur: color
+  }));
+});
 const referenceRows = computed(() =>
   colorOrder.map((color) => ({
     color,
@@ -657,6 +666,7 @@ p {
 
 .reference-board {
   gap: 6px;
+  min-height: 0;
 }
 
 .reference-row {
@@ -695,7 +705,7 @@ p {
   margin-top: 1px;
   font-size: clamp(1.22rem, 1.9vw, 1.5rem);
   font-weight: 900;
-  line-height: 0.2;
+  line-height: 0.72;
   max-width: 100%;
   white-space: nowrap;
   letter-spacing: 0.08em;
@@ -705,9 +715,18 @@ p {
 
 @media (max-width: 900px) and (orientation: landscape) {
   .playing-layout {
-    height: calc(100dvh - 142px);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    max-height: calc(100dvh - 16px);
     overflow: hidden;
     gap: 6px;
+  }
+
+  .reference-board {
+    overflow: auto;
+    padding-right: 2px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
   }
 
   .tiles-grid {
