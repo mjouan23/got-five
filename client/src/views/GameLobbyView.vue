@@ -1,14 +1,14 @@
 <template>
-  <section v-if="showRotatePrompt" class="card rotate-prompt stack">
-    <div class="rotate-icon" aria-hidden="true">
-      <span class="phone-shape" />
-      <span class="rotate-arrow" />
-    </div>
-    <h3>Passez en mode paysage</h3>
-    <p>Tournez votre téléphone pour continuer la partie.</p>
-  </section>
+  <section class="stack">
+    <article v-if="showRotatePrompt" class="card rotate-prompt stack">
+      <div class="rotate-icon" aria-hidden="true">
+        <span class="phone-shape" />
+        <span class="rotate-arrow" />
+      </div>
+      <h3>Passez en mode paysage</h3>
+      <p>Tournez votre téléphone pour continuer la partie.</p>
+    </article>
 
-  <section v-else class="stack">
     <article v-if="!isPlaying" class="card stack">
       <div class="lobby-top">
         <img class="session-logo" src="/logo.png" alt="Logo Got Five" />
@@ -705,7 +705,7 @@ p {
   margin-top: 1px;
   font-size: clamp(1.22rem, 1.9vw, 1.5rem);
   font-weight: 900;
-  line-height: 0.2;
+  line-height: 0.72;
   max-width: 100%;
   white-space: nowrap;
   letter-spacing: 0.08em;
@@ -717,7 +717,7 @@ p {
   .playing-layout {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
-    max-height: calc(100dvh - 16px);
+    max-height: calc(100dvh - 14px);
     overflow: hidden;
     gap: 6px;
   }
@@ -725,6 +725,7 @@ p {
   .reference-board {
     overflow: auto;
     padding-right: 2px;
+    min-height: 0;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
   }
@@ -756,6 +757,64 @@ p {
 
   .reference-tile small {
     font-size: clamp(1.04rem, 2.45vw, 1.28rem);
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 430px) {
+  .playing-layout {
+    max-height: calc(100dvh - 8px);
+    gap: 4px;
+  }
+
+  .tile-card {
+    flex-basis: 50px;
+    min-height: 50px;
+  }
+
+  .reference-row {
+    gap: 2px;
+  }
+
+  .reference-tile {
+    min-height: 27px;
+  }
+
+  .reference-tile strong {
+    font-size: clamp(1rem, 2.35vw, 1.2rem);
+  }
+
+  .reference-tile small {
+    font-size: clamp(0.9rem, 2.05vw, 1.08rem);
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) and (min-height: 431px) and (max-height: 520px) {
+  .playing-layout {
+    max-height: calc(100dvh - 10px);
+    gap: 5px;
+  }
+
+  .tile-card {
+    flex-basis: 54px;
+    min-height: 54px;
+  }
+
+  .reference-tile {
+    min-height: 29px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: landscape) and (min-height: 521px) {
+  .playing-layout {
+    max-height: calc(100dvh - 12px);
+  }
+}
+
+@media (max-width: 900px) {
+  .reference-board {
+    overflow: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
   }
 }
 </style>
