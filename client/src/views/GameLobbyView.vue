@@ -402,6 +402,11 @@ p {
   color: #ffd783;
 }
 
+.playing-layout.card {
+  padding: 4px;
+  gap: 4px;
+}
+
 .tiles-grid {
   list-style: none;
   margin: 0;
@@ -409,34 +414,34 @@ p {
   display: flex;
   flex-wrap: nowrap;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   overflow: hidden;
 }
 
 .tile-card {
   position: relative;
-  flex: 0 0 64px;
+  flex: 0 0 48px;
   display: grid;
   justify-items: center;
   align-content: start;
   gap: 0;
   aspect-ratio: 1 / 1;
-  min-height: 64px;
-  padding: 8px 5px 6px;
-  border-radius: 12px;
+  min-height: 48px;
+  padding: 5px 3px;
+  border-radius: 9px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 -4px 10px rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.38), 0 6px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   overflow: hidden;
 }
 
 .tile-card::before {
   content: '';
   position: absolute;
-  top: 6px;
-  left: 8px;
-  right: 8px;
-  height: 10px;
-  border-radius: 12px;
+  top: 4px;
+  left: 5px;
+  right: 5px;
+  height: 6px;
+  border-radius: 8px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.06) 100%);
   pointer-events: none;
 }
@@ -445,14 +450,16 @@ p {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 4px;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .eye {
   display: block;
-  width: 16px;
-  height: 10px;
+  width: 9px;
+  height: 6px;
   color: #ffffff;
   background: #ffffff;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65), 0 0 0 1px rgba(80, 0, 60, 0.12);
@@ -473,102 +480,102 @@ p {
 .eye::after {
   content: '';
   display: block;
-  width: 5px;
-  height: 5px;
+  width: 3px;
+  height: 3px;
   background: #8b0f58;
 }
 
 .eyes-diamond .eye {
-  width: 18px;
-  height: 18px;
+  width: 10px;
+  height: 10px;
   --eye-base-transform: rotate(45deg);
   border-radius: 1px;
 }
 
 .eyes-diamond .eye::after {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
   margin: 1px auto;
   border-radius: 1px;
 }
 
 .eyes-gear .eye {
-  width: 21px;
-  height: 21px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   clip-path: polygon(50% 0%, 61% 10%, 75% 5%, 80% 18%, 94% 24%, 89% 38%, 100% 50%, 89% 62%, 94% 76%, 80% 82%, 75% 95%, 61% 90%, 50% 100%, 39% 90%, 25% 95%, 20% 82%, 6% 76%, 11% 62%, 0% 50%, 11% 38%, 6% 24%, 20% 18%, 25% 5%, 39% 10%);
 }
 
 .eyes-gear .eye::after {
-  width: 8px;
-  height: 8px;
-  margin: 6px;
+  width: 4px;
+  height: 4px;
+  margin: 4px;
   border-radius: 50%;
 }
 
 .eyes-pill .eye {
-  width: 15px;
-  height: 25px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  border-bottom-left-radius: 3px;
-  border-bottom-right-radius: 3px;
-}
-
-.eyes-pill .eye::after {
   width: 8px;
-  height: 8px;
-  margin: 14px auto 0;
-  border-radius: 4px;
-}
-
-.eyes-sleepy .eye {
-  width: 27px;
-  height: 12px;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  height: 14px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
 }
 
+.eyes-pill .eye::after {
+  width: 3px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 4px;
+}
+
+.eyes-sleepy .eye {
+  width: 14px;
+  height: 7px;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  border-bottom-left-radius: 1px;
+  border-bottom-right-radius: 1px;
+}
+
 .eyes-sleepy .eye::after {
-  width: 9px;
-  height: 9px;
-  margin: 2px auto 0;
+  width: 4px;
+  height: 4px;
+  margin: 1px auto 0;
   border-radius: 50%;
 }
 
 .eyes-wink {
-  gap: 9px;
+  gap: 4px;
 }
 
 .eyes-wink .eye-left {
-  width: 27px;
-  height: 16px;
-  border-radius: 16px;
+  width: 14px;
+  height: 8px;
+  border-radius: 8px;
 }
 
 .eyes-wink .eye-left::after {
-  width: 10px;
-  height: 10px;
-  margin: 3px;
+  width: 4px;
+  height: 4px;
+  margin: 2px;
   border-radius: 50%;
 }
 
 .eyes-wink .eye-right {
-  width: 22px;
-  height: 9px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  border-bottom-left-radius: 3px;
-  border-bottom-right-radius: 3px;
-  margin-top: 7px;
+  width: 12px;
+  height: 6px;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  border-bottom-left-radius: 2px;
+  border-bottom-right-radius: 2px;
+  margin-top: 3px;
 }
 
 .eyes-wink .eye-right::after {
-  width: 9px;
-  height: 5px;
-  margin: 2px auto;
+  width: 4px;
+  height: 3px;
+  margin: 1px auto;
   border-radius: 0 0 6px 6px;
 }
 
@@ -613,7 +620,9 @@ p {
 }
 
 .reference-board {
-  gap: 6px;
+  width: 93%;
+  margin: 0 auto;
+  gap: 2px;
   min-height: 0;
 }
 
@@ -623,13 +632,14 @@ p {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 4px;
+  gap: 2px;
 }
 
 .reference-tile {
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  min-height: 40px;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   display: grid;
   align-content: center;
   justify-items: center;
@@ -640,7 +650,7 @@ p {
 }
 
 .reference-tile strong {
-  font-size: clamp(1.42rem, 2.1vw, 1.9rem);
+  font-size: clamp(1.3rem, 4vw, 1.6rem);
   font-weight: 900;
   line-height: 0.8;
   max-width: 100%;
@@ -651,9 +661,9 @@ p {
 
 .reference-tile small {
   margin-top: 1px;
-  font-size: clamp(1.22rem, 1.9vw, 1.5rem);
+  font-size: clamp(1.2rem, 5vw, 1.08rem);
   font-weight: 900;
-  line-height: 0.72;
+  line-height: 0.6;
   max-width: 100%;
   white-space: nowrap;
   letter-spacing: 0.08em;
@@ -667,36 +677,42 @@ p {
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     max-height: calc(100dvh - 14px);
     overflow: hidden;
-    gap: 6px;
+    gap: 2px;
+    padding: 2px;
+  }
+
+  .playing-layout.card {
+    padding: 2px;
   }
 
   .reference-board {
     overflow: auto;
-    padding-right: 2px;
+    width: 91%;
+    padding-right: 0;
     min-height: 0;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
   }
 
   .tiles-grid {
-    gap: 5px;
-  }
-
-  .tile-card {
-    flex-basis: 56px;
-    min-height: 56px;
-  }
-
-  .tile-eyes {
-    margin-top: 2px;
-  }
-
-  .reference-row {
     gap: 3px;
   }
 
+  .tile-card {
+    flex-basis: 42px;
+    min-height: 42px;
+  }
+
+  .tile-eyes {
+    margin-top: 1px;
+  }
+
+  .reference-row {
+    gap: 2px;
+  }
+
   .reference-tile {
-    min-height: 31px;
+    min-height: 0;
   }
 
   .reference-tile strong {
@@ -711,12 +727,13 @@ p {
 @media (max-width: 900px) and (orientation: landscape) and (max-height: 430px) {
   .playing-layout {
     max-height: calc(100dvh - 8px);
-    gap: 4px;
+    gap: 2px;
+    padding: 1px;
   }
 
   .tile-card {
-    flex-basis: 50px;
-    min-height: 50px;
+    flex-basis: 38px;
+    min-height: 38px;
   }
 
   .reference-row {
@@ -724,7 +741,7 @@ p {
   }
 
   .reference-tile {
-    min-height: 27px;
+    min-height: 0;
   }
 
   .reference-tile strong {
@@ -743,12 +760,12 @@ p {
   }
 
   .tile-card {
-    flex-basis: 54px;
-    min-height: 54px;
+    flex-basis: 40px;
+    min-height: 40px;
   }
 
   .reference-tile {
-    min-height: 29px;
+    min-height: 0;
   }
 }
 
