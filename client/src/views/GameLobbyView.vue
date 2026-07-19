@@ -705,7 +705,7 @@ p {
   margin-top: 1px;
   font-size: clamp(1.22rem, 1.9vw, 1.5rem);
   font-weight: 900;
-  line-height: 0.72;
+  line-height: 0.2;
   max-width: 100%;
   white-space: nowrap;
   letter-spacing: 0.08em;
