@@ -1,14 +1,5 @@
 <template>
   <section class="stack">
-    <article v-if="showRotatePrompt" class="card rotate-prompt stack">
-      <div class="rotate-icon" aria-hidden="true">
-        <span class="phone-shape" />
-        <span class="rotate-arrow" />
-      </div>
-      <h3>Passez en mode paysage</h3>
-      <p>Tournez votre téléphone pour continuer la partie.</p>
-    </article>
-
     <article v-if="!isPlaying" class="card stack">
       <div class="lobby-top">
         <img class="session-logo" src="/logo.png" alt="Logo Got Five" />
@@ -86,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ConnectionStatus from '../components/ConnectionStatus.vue';
 import QrCodeBlock from '../components/QrCodeBlock.vue';
@@ -103,7 +94,6 @@ const store = useSessionStore();
 const socketState = ref('disconnected');
 const copyMessage = ref('');
 const error = ref('');
-const isPhonePortrait = ref(false);
 
 const currentCode = computed(() => normalizeSessionCode(route.params.sessionCode));
 const appHost = window.location.hostname;
@@ -136,12 +126,18 @@ const referenceRows = computed(() =>
       .sort((first, second) => first.chiffre - second.chiffre)
   }))
 );
-const showRotatePrompt = computed(() => isPlaying.value && isPhonePortrait.value);
 
-const updateOrientationState = () => {
-  const isPhoneWidth = window.matchMedia('(max-width: 900px)').matches;
-  const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-  isPhonePortrait.value = isPhoneWidth && isPortrait;
+const lockLandscapeIfPossible = async () => {
+  const orientationApi = screen.orientation;
+  if (!orientationApi || typeof orientationApi.lock !== 'function') {
+    return;
+  }
+
+  try {
+    await orientationApi.lock('landscape');
+  } catch (_error) {
+    // Some devices/browsers (notably iOS Safari/PWA) can refuse programmatic lock.
+  }
 };
 
 const colorClass = (color) => {
@@ -267,6 +263,7 @@ const startGame = async () => {
       if (started?.state) {
         store.updateSessionState(started.state);
       }
+      await lockLandscapeIfPossible();
       return;
     }
 
@@ -275,6 +272,7 @@ const startGame = async () => {
       playerId: store.playerId,
       playerToken: store.playerToken
     });
+    await lockLandscapeIfPossible();
   } catch (requestError) {
     error.value = requestError?.response?.data?.error || 'Demarrage impossible';
   }
@@ -304,10 +302,6 @@ const leaveSession = async () => {
 };
 
 onMounted(async () => {
-  updateOrientationState();
-  window.addEventListener('resize', updateOrientationState);
-  window.addEventListener('orientationchange', updateOrientationState);
-
   store.hydrateFromStorage();
   const routeCode = extractSessionCode(currentCode.value);
 
@@ -324,21 +318,27 @@ onMounted(async () => {
   try {
     await sessionApi.reconnect(currentCode.value, store.playerId, store.playerToken);
     bindSocket();
+    if (isPlaying.value) {
+      await lockLandscapeIfPossible();
+    }
   } catch (_error) {
     await router.push('/join');
   }
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateOrientationState);
-  window.removeEventListener('orientationchange', updateOrientationState);
-
   const socket = socketService.getSocket();
   const events = socketService.events;
   if (socket) {
     socket.off(events.SESSION_STATE);
     socket.off(events.SESSION_ERROR);
     socket.off(events.GAME_STARTED);
+  }
+});
+
+watch(isPlaying, async (playing) => {
+  if (playing) {
+    await lockLandscapeIfPossible();
   }
 });
 </script>
@@ -400,58 +400,6 @@ p {
 
 .start-hint {
   color: #ffd783;
-}
-
-.rotate-prompt {
-  min-height: 52vh;
-  align-content: center;
-  justify-items: center;
-  text-align: center;
-}
-
-.rotate-icon {
-  position: relative;
-  width: 78px;
-  height: 78px;
-  margin: 0 auto 6px;
-}
-
-.phone-shape {
-  position: absolute;
-  top: 18px;
-  left: 25px;
-  width: 30px;
-  height: 42px;
-  border: 3px solid #d9f1ff;
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 2px rgba(217, 241, 255, 0.12);
-  transform: rotate(-32deg);
-}
-
-.rotate-arrow {
-  position: absolute;
-  top: 12px;
-  left: 8px;
-  width: 62px;
-  height: 62px;
-  border: 4px solid transparent;
-  border-top-color: #9dffbf;
-  border-left-color: #9dffbf;
-  border-radius: 50%;
-  transform: rotate(12deg);
-}
-
-.rotate-arrow::after {
-  content: '';
-  position: absolute;
-  top: -8px;
-  left: 2px;
-  width: 0;
-  height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-bottom: 12px solid #9dffbf;
-  transform: rotate(-40deg);
 }
 
 .tiles-grid {
