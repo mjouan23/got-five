@@ -13,5 +13,5 @@ export const env = {
   PUBLIC_APP_URL: process.env.PUBLIC_APP_URL || 'http://localhost:5173',
   SQLITE_PATH: process.env.SQLITE_PATH || './data/got-five.sqlite',
   SESSION_EXPIRATION_HOURS: toInt(process.env.SESSION_EXPIRATION_HOURS, 24),
-  MAX_PLAYERS_PER_SESSION: toInt(process.env.MAX_PLAYERS_PER_SESSION, 10)
+  MAX_PLAYERS_PER_SESSION: toInt(process.env.MAX_PLAYERS_PER_SESSION, 4)
 };

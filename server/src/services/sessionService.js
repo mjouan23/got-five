@@ -14,8 +14,12 @@ import { GAME_STATUS } from '../../../shared/game-status.js';
 const tilesData = JSON.parse(
   readFileSync(new URL('../data/tiles.json', import.meta.url), 'utf-8')
 );
+const tileColors = ['vert', 'rouge', 'bleu', 'rose', 'orange'];
 
 const sessionTilesByPlayer = new Map();
+const sessionSharedFaceUpTiles = new Map();
+const sessionDrawHistoryTiles = new Map();
+const sessionTurnByState = new Map();
 
 const shuffle = (items) => {
   const copy = [...items];
@@ -75,12 +79,159 @@ const buildPlayerTiles = (players) => {
 const toHiddenTileBacksByPlayer = (tilesByPlayer) => {
   const hidden = {};
   for (const [playerId, tiles] of Object.entries(tilesByPlayer || {})) {
-    hidden[playerId] = (tiles || []).map((tile, index) => ({
+    hidden[playerId] = [...(tiles || [])]
+      .sort((first, second) => first.chiffre - second.chiffre)
+      .map((tile, index) => ({
       id: `${playerId}-${index + 1}`,
       couleur: tile.couleur
-    }));
+      }));
   }
   return hidden;
+};
+
+const buildSharedFaceUpTiles = (tilesByPlayer) => {
+  const assignedNumbers = new Set();
+  for (const tiles of Object.values(tilesByPlayer || {})) {
+    for (const tile of tiles || []) {
+      assignedNumbers.add(tile.chiffre);
+    }
+  }
+
+  const distinctByNumber = [];
+  const seenNumbers = new Set();
+
+  for (const color of tileColors) {
+    const candidates = shuffle(
+      tilesData.filter(
+        (tile) => tile.couleur === color
+          && !assignedNumbers.has(tile.chiffre)
+          && !seenNumbers.has(tile.chiffre)
+      )
+    );
+
+    const chosen = candidates[0];
+    if (!chosen) {
+      throw new AppError(
+        'Pas assez de tuiles visibles communes disponibles pour couvrir toutes les couleurs',
+        409
+      );
+    }
+
+    seenNumbers.add(chosen.chiffre);
+    distinctByNumber.push({
+      id: `shared-${chosen.couleur}-${chosen.chiffre}`,
+      chiffre: chosen.chiffre,
+      couleur: chosen.couleur,
+      nombrePoints: chosen.nombrePoints
+    });
+  }
+
+  return distinctByNumber.sort((first, second) => first.chiffre - second.chiffre);
+};
+
+const buildRemainingTilesByColor = (tilesByPlayer, sharedFaceUpTiles) => {
+  const remaining = Object.fromEntries(tileColors.map((color) => [color, 0]));
+
+  for (const tile of tilesData) {
+    if (tile.couleur in remaining) {
+      remaining[tile.couleur] += 1;
+    }
+  }
+
+  for (const tiles of Object.values(tilesByPlayer || {})) {
+    for (const tile of tiles || []) {
+      if (tile.couleur in remaining) {
+        remaining[tile.couleur] = Math.max(0, remaining[tile.couleur] - 1);
+      }
+    }
+  }
+
+  for (const tile of sharedFaceUpTiles || []) {
+    if (tile.couleur in remaining) {
+      remaining[tile.couleur] = Math.max(0, remaining[tile.couleur] - 1);
+    }
+  }
+
+  return remaining;
+};
+
+const buildRemainingTilesByColorWithHistory = (tilesByPlayer, sharedFaceUpTiles, drawHistoryTiles) => {
+  return buildRemainingTilesByColor(tilesByPlayer, [...(sharedFaceUpTiles || []), ...(drawHistoryTiles || [])]);
+};
+
+const pickFirstTurn = (players) => {
+  const candidates = shuffle(players || []);
+  return candidates[0]?.id || null;
+};
+
+const getCurrentTurnPlayerId = (sessionId) => {
+  const turnState = sessionTurnByState.get(sessionId);
+  if (!turnState || !Array.isArray(turnState.order) || turnState.order.length === 0) {
+    return null;
+  }
+
+  return turnState.order[turnState.currentIndex] || null;
+};
+
+const advanceTurn = (sessionId) => {
+  const turnState = sessionTurnByState.get(sessionId);
+  if (!turnState || !Array.isArray(turnState.order) || turnState.order.length === 0) {
+    return;
+  }
+
+  turnState.currentIndex = (turnState.currentIndex + 1) % turnState.order.length;
+  sessionTurnByState.set(sessionId, turnState);
+};
+
+const removePlayerFromTurnOrder = (sessionId, playerId) => {
+  const turnState = sessionTurnByState.get(sessionId);
+  if (!turnState || !Array.isArray(turnState.order) || turnState.order.length === 0) {
+    return;
+  }
+
+  const removedIndex = turnState.order.indexOf(playerId);
+  if (removedIndex === -1) {
+    return;
+  }
+
+  turnState.order.splice(removedIndex, 1);
+
+  if (turnState.order.length === 0) {
+    sessionTurnByState.delete(sessionId);
+    return;
+  }
+
+  if (removedIndex < turnState.currentIndex) {
+    turnState.currentIndex -= 1;
+  } else if (removedIndex === turnState.currentIndex) {
+    turnState.currentIndex = turnState.currentIndex % turnState.order.length;
+  }
+
+  sessionTurnByState.set(sessionId, turnState);
+};
+
+const buildCrossedNumbersByPlayer = (tilesByPlayer, sharedFaceUpTiles) => {
+  const entries = Object.entries(tilesByPlayer || {});
+  const sharedNumbers = new Set((sharedFaceUpTiles || []).map((tile) => tile.chiffre));
+  const crossed = {};
+
+  for (const [playerId] of entries) {
+    const numbers = new Set(sharedNumbers);
+
+    for (const [otherPlayerId, otherTiles] of entries) {
+      if (otherPlayerId === playerId) {
+        continue;
+      }
+
+      for (const tile of otherTiles || []) {
+        numbers.add(tile.chiffre);
+      }
+    }
+
+    crossed[playerId] = [...numbers].sort((first, second) => first - second);
+  }
+
+  return crossed;
 };
 
 const expirationDate = () => {
@@ -92,7 +243,17 @@ const expirationDate = () => {
 const createJoinUrl = (code) => `${env.PUBLIC_APP_URL.replace(/\/$/, '')}/join/${code}`;
 
 const getSessionAndPlayers = (session) => {
-  const playerTilesById = toHiddenTileBacksByPlayer(sessionTilesByPlayer.get(session.id) || {});
+  const sourceTilesByPlayer = sessionTilesByPlayer.get(session.id) || {};
+  const playerTilesById = toHiddenTileBacksByPlayer(sourceTilesByPlayer);
+  const sharedFaceUpTiles = sessionSharedFaceUpTiles.get(session.id) || [];
+  const drawHistoryTiles = sessionDrawHistoryTiles.get(session.id) || [];
+  const crossedNumbersByPlayer = buildCrossedNumbersByPlayer(sourceTilesByPlayer, sharedFaceUpTiles);
+  const remainingTilesByColor = buildRemainingTilesByColorWithHistory(
+    sourceTilesByPlayer,
+    sharedFaceUpTiles,
+    drawHistoryTiles
+  );
+  const currentTurnPlayerId = getCurrentTurnPlayerId(session.id);
   const players = playerRepository.listBySession(session.id).map((player) => ({
     ...player,
     connected: Boolean(player.connected)
@@ -104,6 +265,10 @@ const getSessionAndPlayers = (session) => {
     updatedAt: session.updated_at,
     players,
     playerTilesById,
+    sharedFaceUpTiles,
+    crossedNumbersByPlayer,
+    remainingTilesByColor,
+    currentTurnPlayerId,
     maxPlayers: env.MAX_PLAYERS_PER_SESSION
   };
 };
@@ -267,10 +432,90 @@ export const sessionService = {
       delete tiles[player.id];
       sessionTilesByPlayer.set(session.id, tiles);
     }
+    removePlayerFromTurnOrder(session.id, player.id);
 
     return {
       removedPlayerId: player.id,
       sessionCode: session.code
+    };
+  },
+
+  drawSharedTile(sessionCode, playerId, playerToken, color) {
+    const session = ensureSessionByCode(sessionCode);
+    const safePlayerId = requireNonEmptyString(playerId, 'playerId');
+    const safePlayerToken = requireNonEmptyString(playerToken, 'playerToken');
+    const safeColor = requireNonEmptyString(color, 'color').toLowerCase();
+    const player = playerRepository.findByIdAndToken(safePlayerId, safePlayerToken);
+
+    if (!player || player.session_id !== session.id) {
+      throw new AppError('Authentification invalide', 401);
+    }
+
+    if (session.status !== GAME_STATUS.PLAYING) {
+      throw new AppError('La partie doit être en cours pour piocher', 409);
+    }
+
+    if (!tileColors.includes(safeColor)) {
+      throw new AppError('Couleur de pioche invalide', 400);
+    }
+
+    const currentTurnPlayerId = getCurrentTurnPlayerId(session.id);
+    if (!currentTurnPlayerId || currentTurnPlayerId !== player.id) {
+      throw new AppError('Ce n\'est pas votre tour', 409);
+    }
+
+    const assignedTiles = sessionTilesByPlayer.get(session.id) || {};
+    const sharedFaceUpTiles = sessionSharedFaceUpTiles.get(session.id) || [];
+    const drawHistoryTiles = sessionDrawHistoryTiles.get(session.id) || [];
+
+    const usedTileKeys = new Set();
+    for (const tiles of Object.values(assignedTiles)) {
+      for (const tile of tiles || []) {
+        usedTileKeys.add(`${tile.couleur}-${tile.chiffre}`);
+      }
+    }
+    for (const tile of sharedFaceUpTiles) {
+      usedTileKeys.add(`${tile.couleur}-${tile.chiffre}`);
+    }
+    for (const tile of drawHistoryTiles) {
+      usedTileKeys.add(`${tile.couleur}-${tile.chiffre}`);
+    }
+
+    const candidates = shuffle(
+      tilesData.filter(
+        (tile) => tile.couleur === safeColor && !usedTileKeys.has(`${tile.couleur}-${tile.chiffre}`)
+      )
+    );
+
+    const drawnTile = candidates[0];
+    if (!drawnTile) {
+      throw new AppError('Plus de tuiles disponibles pour cette couleur', 409);
+    }
+
+    const drawnEntry = {
+      id: `shared-${drawnTile.couleur}-${drawnTile.chiffre}-${drawHistoryTiles.length + 1}`,
+      chiffre: drawnTile.chiffre,
+      couleur: drawnTile.couleur,
+      nombrePoints: drawnTile.nombrePoints
+    };
+
+    const nextSharedTiles = [...sharedFaceUpTiles];
+    if (nextSharedTiles.length < 6) {
+      nextSharedTiles.push(drawnEntry);
+    } else {
+      nextSharedTiles[5] = drawnEntry;
+    }
+
+    sessionSharedFaceUpTiles.set(session.id, nextSharedTiles);
+    sessionDrawHistoryTiles.set(session.id, [...drawHistoryTiles, drawnEntry]);
+    advanceTurn(session.id);
+
+    sessionRepository.touch(session.id, new Date().toISOString(), expirationDate());
+
+    return {
+      sessionCode: session.code,
+      status: GAME_STATUS.PLAYING,
+      state: this.getSessionState(session.code)
     };
   },
 
@@ -290,7 +535,15 @@ export const sessionService = {
     }
 
     const assignedTiles = buildPlayerTiles(players);
+    const sharedFaceUpTiles = buildSharedFaceUpTiles(assignedTiles);
+    const firstTurnPlayerId = pickFirstTurn(players);
     sessionTilesByPlayer.set(session.id, assignedTiles);
+    sessionSharedFaceUpTiles.set(session.id, sharedFaceUpTiles);
+    sessionDrawHistoryTiles.set(session.id, []);
+    sessionTurnByState.set(session.id, {
+      order: players.map((entry) => entry.id),
+      currentIndex: Math.max(0, players.findIndex((entry) => entry.id === firstTurnPlayerId))
+    });
 
     const now = new Date().toISOString();
     sessionRepository.updateStatus(session.id, GAME_STATUS.PLAYING, now);

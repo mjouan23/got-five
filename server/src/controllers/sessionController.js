@@ -65,5 +65,19 @@ export const sessionController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  draw(req, res, next) {
+    try {
+      const payload = sessionService.drawSharedTile(
+        req.params.sessionCode,
+        req.body.playerId,
+        req.body.playerToken,
+        req.body.color
+      );
+      res.json(payload);
+    } catch (error) {
+      next(error);
+    }
   }
 };

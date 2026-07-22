@@ -56,19 +56,63 @@
         </li>
       </ul>
 
+      <ul class="tiles-grid face-up-grid" aria-label="Tuiles visibles communes">
+        <li
+          v-for="tile in sharedFaceUpTilesDisplay"
+          :key="tile.id"
+          class="tile-card tile-face-up"
+          :class="colorClass(tile.couleur)"
+        >
+          <strong class="tile-face-value">{{ tile.chiffre }}</strong>
+          <small class="tile-face-points">{{ pointsLabel(tile.nombrePoints) }}</small>
+        </li>
+        <li
+          v-if="sharedFaceUpTilesDisplay.length < 6"
+          class="tile-card tile-reserved"
+          aria-label="Emplacement reserve pour une 6eme tuile"
+        />
+      </ul>
+
       <section class="reference-board stack" aria-label="Tableau des 60 tuiles">
         <ul class="reference-row" v-for="row in referenceRows" :key="row.color">
           <li
             v-for="tile in row.tiles"
             :key="tile.chiffre"
             class="reference-tile"
-            :class="colorClass(tile.couleur)"
+            :class="[
+              colorClass(tile.couleur),
+              {
+                'reference-tile-crossed': isCrossedNumber(tile.chiffre),
+                'reference-tile-markable': isMarkableNumber(tile.chiffre),
+                'reference-tile-manual': isManuallyMarked(tile.chiffre)
+              }
+            ]"
+            :tabindex="isMarkableNumber(tile.chiffre) ? 0 : -1"
+            role="button"
+            @click="toggleManualCrossBar(tile.chiffre)"
+            @keydown.enter.prevent="toggleManualCrossBar(tile.chiffre)"
+            @keydown.space.prevent="toggleManualCrossBar(tile.chiffre)"
           >
             <strong>{{ tile.chiffre }}</strong>
             <small>{{ pointsLabel(tile.nombrePoints) }}</small>
           </li>
         </ul>
       </section>
+
+      <div class="draw-actions" aria-label="Pioche de tuiles par couleur">
+        <button
+          v-for="entry in availableDrawButtons"
+          :key="entry.color"
+          class="btn draw-btn"
+          :class="colorClass(entry.color)"
+          type="button"
+          :disabled="isDrawing || !isCurrentTurn"
+          @click="drawTile(entry.color)"
+        >
+          Piocher
+        </button>
+        <button class="btn propose-btn" type="button" :disabled="isDrawing || !isCurrentTurn">Proposer !</button>
+      </div>
 
       <p v-if="!playerTiles.length" class="start-hint">Attribution des nombres en cours...</p>
       <button class="btn secondary" type="button" @click="leaveSession">Quitter la partie</button>
@@ -94,6 +138,8 @@ const store = useSessionStore();
 const socketState = ref('disconnected');
 const copyMessage = ref('');
 const error = ref('');
+const manualMarkedNumbers = ref([]);
+const isDrawing = ref(false);
 
 const currentCode = computed(() => normalizeSessionCode(route.params.sessionCode));
 const appHost = window.location.hostname;
@@ -108,7 +154,14 @@ const connectedPlayersCount = computed(() =>
 const canStartGame = computed(() => connectedPlayersCount.value >= 2);
 const isPlaying = computed(() => store.gameStatus === 'PLAYING');
 const playerTiles = computed(() => store.currentPlayerTiles);
+const sharedFaceUpTiles = computed(() => store.sharedFaceUpTiles || []);
+const crossedNumbers = computed(
+  () => new Set((store.currentCrossedNumbers || []).map((value) => Number(value)))
+);
+const manualMarkedSet = computed(() => new Set(manualMarkedNumbers.value.map((value) => Number(value))));
+const remainingTilesByColor = computed(() => store.remainingTilesByColor || {});
 const colorOrder = ['vert', 'rose', 'bleu', 'rouge', 'orange'];
+const isCurrentTurn = computed(() => Boolean(store.playerId) && store.playerId === store.currentTurnPlayerId);
 const displayTiles = computed(() => {
   if (playerTiles.value.length) {
     return playerTiles.value;
@@ -118,6 +171,26 @@ const displayTiles = computed(() => {
     couleur: color
   }));
 });
+const sharedFaceUpTilesDisplay = computed(() => {
+  if (sharedFaceUpTiles.value.length) {
+    return sharedFaceUpTiles.value.slice(0, 6);
+  }
+
+  return colorOrder.map((color, index) => ({
+    id: `shared-placeholder-${color}-${index + 1}`,
+    chiffre: '?',
+    couleur: color,
+    nombrePoints: 0
+  }));
+});
+const availableDrawButtons = computed(() =>
+  colorOrder
+    .map((color) => ({
+      color,
+      remaining: Number(remainingTilesByColor.value[color] || 0)
+    }))
+    .filter((entry) => entry.remaining > 0)
+);
 const referenceRows = computed(() =>
   colorOrder.map((color) => ({
     color,
@@ -204,6 +277,57 @@ const pointsLabel = (points) => {
   return '';
 };
 
+const isCrossedNumber = (value) => crossedNumbers.value.has(Number(value));
+const isMarkableNumber = (value) => !isCrossedNumber(value);
+const isManuallyMarked = (value) => isMarkableNumber(value) && manualMarkedSet.value.has(Number(value));
+
+const toggleManualCrossBar = (value) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue) || isCrossedNumber(numberValue)) {
+    return;
+  }
+
+  const draft = new Set(manualMarkedNumbers.value.map((entry) => Number(entry)));
+  if (draft.has(numberValue)) {
+    draft.delete(numberValue);
+  } else {
+    draft.add(numberValue);
+  }
+
+  manualMarkedNumbers.value = [...draft].sort((first, second) => first - second);
+};
+
+const drawTile = async (color) => {
+  if (isDrawing.value) {
+    return;
+  }
+
+  error.value = '';
+  isDrawing.value = true;
+
+  try {
+    const socket = socketService.getSocket();
+    if (socket?.connected) {
+      socket.emit(socketService.events.GAME_DRAW, {
+        sessionCode: currentCode.value,
+        playerId: store.playerId,
+        playerToken: store.playerToken,
+        color
+      });
+      return;
+    }
+
+    const response = await sessionApi.drawSharedTile(currentCode.value, store.playerId, store.playerToken, color);
+    if (response?.state) {
+      store.updateSessionState(response.state);
+    }
+  } catch (requestError) {
+    error.value = requestError?.response?.data?.error || 'Pioche impossible';
+  } finally {
+    isDrawing.value = false;
+  }
+};
+
 const roleLabel = (role) => {
   if (role === 'HOST') {
     return 'Hôte';
@@ -241,6 +365,7 @@ const bindSocket = () => {
 
   socket.on(events.SESSION_ERROR, (payload) => {
     error.value = payload?.message || 'Erreur temps reel';
+    isDrawing.value = false;
   });
 
   socket.on(events.GAME_STARTED, (payload) => {
@@ -248,6 +373,13 @@ const bindSocket = () => {
     if (payload?.state) {
       store.updateSessionState(payload.state);
     }
+  });
+
+  socket.on(events.GAME_DRAWN, (payload) => {
+    if (payload?.state) {
+      store.updateSessionState(payload.state);
+    }
+    isDrawing.value = false;
   });
 };
 
@@ -358,6 +490,7 @@ onBeforeUnmount(() => {
     socket.off(events.SESSION_STATE);
     socket.off(events.SESSION_ERROR);
     socket.off(events.GAME_STARTED);
+    socket.off(events.GAME_DRAWN);
   }
 });
 
@@ -367,6 +500,17 @@ watch(isPlaying, async (playing) => {
     await lockLandscapeIfPossible();
   }
 });
+
+watch(
+  () => store.currentCrossedNumbers,
+  (numbers) => {
+    const blocked = new Set((numbers || []).map((value) => Number(value)));
+    manualMarkedNumbers.value = manualMarkedNumbers.value.filter(
+      (value) => !blocked.has(Number(value))
+    );
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -463,6 +607,46 @@ p {
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   overflow: hidden;
+}
+
+.face-up-grid {
+  gap: 4px;
+}
+
+.tile-face-up {
+  align-content: center;
+  justify-items: center;
+  grid-template-rows: auto auto;
+  gap: 1px;
+}
+
+.tile-face-value {
+  font-size: 1.46rem;
+  line-height: 0.82;
+  font-weight: 900;
+  color: #fff8e8;
+  text-shadow: -1px -1px 0 #562452, 1px -1px 0 #562452, -1px 1px 0 #562452, 1px 1px 0 #562452;
+}
+
+.tile-face-points {
+  font-size: 0.94rem;
+  line-height: 0.72;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #fff8e8;
+  text-shadow: -1px -1px 0 #562452, 1px -1px 0 #562452, -1px 1px 0 #562452, 1px 1px 0 #562452;
+}
+
+.tile-reserved {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0,
+    rgba(255, 255, 255, 0.1) 5px,
+    rgba(255, 255, 255, 0.04) 5px,
+    rgba(255, 255, 255, 0.04) 10px
+  );
+  border: 1px dashed rgba(255, 255, 255, 0.38);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 .tile-card::before {
@@ -651,10 +835,52 @@ p {
 }
 
 .reference-board {
-  width: 93%;
+  width: 85%;
   margin: 0 auto;
+  padding: 15px;
   gap: 2px;
   min-height: 0;
+}
+
+.draw-actions {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.draw-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
+  color: #111827;
+  font-weight: 800;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.draw-btn:disabled {
+  opacity: 0.55;
+}
+
+.propose-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  font-weight: 900;
+  color: #fff8e8;
+  background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  border: 1px solid rgba(20, 8, 45, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 2px 8px rgba(24, 10, 58, 0.28);
 }
 
 .reference-row {
@@ -663,11 +889,12 @@ p {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 2px;
+  gap: 5px;
 }
 
 .reference-tile {
-  border-radius: 5px;
+  position: relative;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   aspect-ratio: 1 / 1;
   min-height: 0;
@@ -678,6 +905,50 @@ p {
   line-height: 1;
   overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.reference-tile-crossed::before,
+.reference-tile-crossed::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 142%;
+  height: 3.5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.88);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.reference-tile-crossed::before {
+  left: 0;
+  transform-origin: 0 0;
+  transform: translate(-1px, -1px) rotate(45deg);
+}
+
+.reference-tile-crossed::after {
+  right: 0;
+  transform-origin: 100% 0;
+  transform: translate(1px, -1px) rotate(-45deg);
+}
+
+.reference-tile-markable {
+  cursor: pointer;
+}
+
+.reference-tile-manual::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 142%;
+  height: 3.5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.88);
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.4);
+  transform-origin: 0 0;
+  transform: translate(-1px, -1px) rotate(45deg);
+  pointer-events: none;
 }
 
 .reference-tile strong {
@@ -705,7 +976,7 @@ p {
 @media (max-width: 900px) and (orientation: landscape) {
   .playing-layout {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
     max-height: calc(100dvh - 14px);
     overflow: hidden;
     gap: 2px;
@@ -725,6 +996,20 @@ p {
     -webkit-overflow-scrolling: touch;
   }
 
+  .draw-actions {
+    gap: 4px;
+  }
+
+  .draw-btn {
+    padding: 5px 3px;
+    font-size: 0.72rem;
+  }
+
+  .propose-btn {
+    padding: 5px 3px;
+    font-size: 0.72rem;
+  }
+
   .tiles-grid {
     gap: 3px;
   }
@@ -732,6 +1017,14 @@ p {
   .tile-card {
     flex-basis: 42px;
     min-height: 42px;
+  }
+
+  .tile-face-value {
+    font-size: 1.28rem;
+  }
+
+  .tile-face-points {
+    font-size: 0.84rem;
   }
 
   .tile-eyes {
@@ -767,6 +1060,24 @@ p {
     min-height: 38px;
   }
 
+  .draw-btn {
+    padding: 4px 2px;
+    font-size: 0.66rem;
+  }
+
+  .propose-btn {
+    padding: 4px 2px;
+    font-size: 0.66rem;
+  }
+
+  .tile-face-value {
+    font-size: 1.1rem;
+  }
+
+  .tile-face-points {
+    font-size: 0.74rem;
+  }
+
   .reference-row {
     gap: 2px;
   }
@@ -793,6 +1104,22 @@ p {
   .tile-card {
     flex-basis: 40px;
     min-height: 40px;
+  }
+
+  .draw-btn {
+    font-size: 0.7rem;
+  }
+
+  .propose-btn {
+    font-size: 0.7rem;
+  }
+
+  .tile-face-value {
+    font-size: 1.18rem;
+  }
+
+  .tile-face-points {
+    font-size: 0.8rem;
   }
 
   .reference-tile {

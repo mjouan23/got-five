@@ -8,5 +8,7 @@ export const SOCKET_EVENTS = Object.freeze({
   PLAYER_CONNECTED: 'player:connected',
   PLAYER_DISCONNECTED: 'player:disconnected',
   GAME_START: 'game:start',
-  GAME_STARTED: 'game:started'
+  GAME_STARTED: 'game:started',
+  GAME_DRAW: 'game:draw',
+  GAME_DRAWN: 'game:drawn'
 });

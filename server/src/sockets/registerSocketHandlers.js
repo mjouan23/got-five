@@ -60,6 +60,20 @@ export const registerSocketHandlers = (io, socket) => {
     }
   });
 
+  socket.on(SOCKET_EVENTS.GAME_DRAW, (payload) => {
+    try {
+      const { sessionCode, playerId, playerToken, color } = payload || {};
+      const drawn = sessionService.drawSharedTile(sessionCode, playerId, playerToken, color);
+      io.to(roomName(drawn.sessionCode)).emit(SOCKET_EVENTS.GAME_DRAWN, drawn);
+      io.to(roomName(drawn.sessionCode)).emit(
+        SOCKET_EVENTS.SESSION_STATE,
+        sessionService.getSessionState(drawn.sessionCode)
+      );
+    } catch (error) {
+      socket.emit(SOCKET_EVENTS.SESSION_ERROR, { message: error.message });
+    }
+  });
+
   socket.on('disconnect', () => {
     const detached = sessionService.detachSocketBySocketId(socket.id);
     if (!detached) {

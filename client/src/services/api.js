@@ -41,5 +41,13 @@ export const sessionApi = {
       playerToken
     });
     return data;
+  },
+  async drawSharedTile(sessionCode, playerId, playerToken, color) {
+    const { data } = await api.post(`/api/sessions/${sessionCode}/draw`, {
+      playerId,
+      playerToken,
+      color
+    });
+    return data;
   }
 };

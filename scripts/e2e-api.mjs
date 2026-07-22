@@ -118,7 +118,7 @@ async function run() {
     expected: 201
   });
 
-  for (let i = 0; i < 9; i += 1) {
+  for (let i = 0; i < 3; i += 1) {
     await req(`/api/sessions/${maxCase.data.sessionCode}/join`, {
       method: 'POST',
       body: { nickname: `P${i}` },

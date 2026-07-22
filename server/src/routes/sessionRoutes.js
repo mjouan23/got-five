@@ -9,5 +9,6 @@ router.post('/sessions/:sessionCode/join', sessionController.join);
 router.post('/sessions/:sessionCode/reconnect', sessionController.reconnect);
 router.post('/sessions/:sessionCode/start', sessionController.start);
 router.post('/sessions/:sessionCode/leave', sessionController.leave);
+router.post('/sessions/:sessionCode/draw', sessionController.draw);
 
 export default router;

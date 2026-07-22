@@ -12,13 +12,18 @@ export const useSessionStore = defineStore('session', {
     status: 'idle',
     players: [],
     playerTilesById: {},
+    sharedFaceUpTiles: [],
+    crossedNumbersByPlayer: {},
+    remainingTilesByColor: {},
+    currentTurnPlayerId: '',
     gameStatus: 'LOBBY',
     error: ''
   }),
   getters: {
     isHost: (state) => state.role === 'HOST',
     hasIdentity: (state) => Boolean(state.sessionCode && state.playerId && state.playerToken),
-    currentPlayerTiles: (state) => state.playerTilesById?.[state.playerId] || []
+    currentPlayerTiles: (state) => state.playerTilesById?.[state.playerId] || [],
+    currentCrossedNumbers: (state) => state.crossedNumbersByPlayer?.[state.playerId] || []
   },
   actions: {
     setError(message) {
@@ -56,6 +61,10 @@ export const useSessionStore = defineStore('session', {
       this.role = '';
       this.players = [];
       this.playerTilesById = {};
+      this.sharedFaceUpTiles = [];
+      this.crossedNumbersByPlayer = {};
+      this.remainingTilesByColor = {};
+      this.currentTurnPlayerId = '';
       this.gameStatus = 'LOBBY';
       storageService.clear();
     },
@@ -63,6 +72,10 @@ export const useSessionStore = defineStore('session', {
       this.sessionCode = payload.sessionCode;
       this.players = payload.players || [];
       this.playerTilesById = payload.playerTilesById || {};
+      this.sharedFaceUpTiles = payload.sharedFaceUpTiles || [];
+      this.crossedNumbersByPlayer = payload.crossedNumbersByPlayer || {};
+      this.remainingTilesByColor = payload.remainingTilesByColor || {};
+      this.currentTurnPlayerId = payload.currentTurnPlayerId || '';
       this.gameStatus = payload.status;
     },
     async ensureSessionExists(code) {

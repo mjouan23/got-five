@@ -51,7 +51,7 @@ Backend [server/.env.example](server/.env.example)
 - PUBLIC_APP_URL=http://localhost:5173
 - SQLITE_PATH=./data/got-five.sqlite
 - SESSION_EXPIRATION_HOURS=24
-- MAX_PLAYERS_PER_SESSION=10
+- MAX_PLAYERS_PER_SESSION=4
 
 ## Demarrage en developpement
 
