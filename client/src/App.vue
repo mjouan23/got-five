@@ -1,10 +1,10 @@
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'fullscreen-mode': isGameFullscreen }">
     <AppHeader v-if="showHeader" />
-    <main class="app-main">
+    <main class="app-main" :class="{ 'fullscreen-main': isGameFullscreen }">
       <RouterView />
     </main>
-    <OfflineNotice />
+    <OfflineNotice v-if="!isGameFullscreen" />
   </div>
 </template>
 
@@ -22,5 +22,11 @@ const showHeader = computed(() => {
   const isGameScreen = route.name === 'game';
   const isPlaying = sessionStore.gameStatus === 'PLAYING';
   return !(isGameScreen && isPlaying);
+});
+
+const isGameFullscreen = computed(() => {
+  const isGameScreen = route.name === 'game';
+  const isPlaying = sessionStore.gameStatus === 'PLAYING';
+  return isGameScreen && isPlaying;
 });
 </script>

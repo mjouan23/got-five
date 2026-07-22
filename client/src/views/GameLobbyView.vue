@@ -140,6 +140,19 @@ const lockLandscapeIfPossible = async () => {
   }
 };
 
+const requestFullscreenIfPossible = async () => {
+  const rootElement = document.documentElement;
+  if (!rootElement || document.fullscreenElement || typeof rootElement.requestFullscreen !== 'function') {
+    return;
+  }
+
+  try {
+    await rootElement.requestFullscreen();
+  } catch (_error) {
+    // Fullscreen can be blocked by browser policy depending on platform/context.
+  }
+};
+
 const colorClass = (color) => {
   if (color === 'vert') {
     return 'tile-vert';
@@ -263,6 +276,7 @@ const startGame = async () => {
       if (started?.state) {
         store.updateSessionState(started.state);
       }
+      await requestFullscreenIfPossible();
       await lockLandscapeIfPossible();
       return;
     }
@@ -272,6 +286,7 @@ const startGame = async () => {
       playerId: store.playerId,
       playerToken: store.playerToken
     });
+    await requestFullscreenIfPossible();
     await lockLandscapeIfPossible();
   } catch (requestError) {
     error.value = requestError?.response?.data?.error || 'Demarrage impossible';
@@ -298,6 +313,15 @@ const leaveSession = async () => {
 
   socketService.disconnect();
   store.clearIdentity();
+
+  if (document.fullscreenElement && typeof document.exitFullscreen === 'function') {
+    try {
+      await document.exitFullscreen();
+    } catch (_error) {
+      // No-op if browser denies fullscreen exit.
+    }
+  }
+
   await router.push('/');
 };
 
@@ -319,6 +343,7 @@ onMounted(async () => {
     await sessionApi.reconnect(currentCode.value, store.playerId, store.playerToken);
     bindSocket();
     if (isPlaying.value) {
+      await requestFullscreenIfPossible();
       await lockLandscapeIfPossible();
     }
   } catch (_error) {
@@ -338,6 +363,7 @@ onBeforeUnmount(() => {
 
 watch(isPlaying, async (playing) => {
   if (playing) {
+    await requestFullscreenIfPossible();
     await lockLandscapeIfPossible();
   }
 });
@@ -403,8 +429,13 @@ p {
 }
 
 .playing-layout.card {
-  padding: 4px;
-  gap: 4px;
+  padding: 0;
+  gap: 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .tiles-grid {

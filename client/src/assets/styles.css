@@ -42,11 +42,22 @@ a {
   flex-direction: column;
 }
 
+.app-shell.fullscreen-mode {
+  min-height: 100dvh;
+}
+
 .app-main {
   width: min(680px, 100%);
   margin: 0 auto;
   padding: var(--space-3);
   flex: 1;
+}
+
+.app-main.fullscreen-main {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 
 .card {

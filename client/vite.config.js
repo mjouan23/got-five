@@ -16,7 +16,8 @@ export default defineConfig({
         description: 'Cinq numéros vous soutiennent. Utilisez votre logique pour deviner leurs valeurs !',
         theme_color: '#07090c',
         background_color: '#07090c',
-        display: 'standalone',
+        display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone'],
         orientation: 'any',
         start_url: '/',
         icons: [
