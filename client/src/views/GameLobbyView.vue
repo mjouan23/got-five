@@ -47,6 +47,16 @@
     </article>
 
     <article v-if="isPlaying" class="card stack playing-layout">
+      <button
+        class="close-game-btn"
+        type="button"
+        aria-label="Quitter la partie"
+        @click="confirmLeaveSession"
+      >
+        <span class="close-icon-line close-icon-line-a" />
+        <span class="close-icon-line close-icon-line-b" />
+      </button>
+
       <ul class="tiles-grid">
         <li v-for="tile in displayTiles" :key="tile.id" class="tile-card" :class="colorClass(tile.couleur)">
           <div class="tile-eyes" :class="eyeClass(tile.couleur)">
@@ -113,9 +123,6 @@
         </button>
         <button class="btn propose-btn" type="button" :disabled="isDrawing || !isCurrentTurn">Proposer !</button>
       </div>
-
-      <p v-if="!playerTiles.length" class="start-hint">Attribution des nombres en cours...</p>
-      <button class="btn secondary" type="button" @click="leaveSession">Quitter la partie</button>
     </article>
   </section>
 </template>
@@ -457,6 +464,14 @@ const leaveSession = async () => {
   await router.push('/');
 };
 
+const confirmLeaveSession = async () => {
+  const confirmed = window.confirm('Voulez-vous vraiment quitter la partie ?');
+  if (!confirmed) {
+    return;
+  }
+  await leaveSession();
+};
+
 onMounted(async () => {
   store.hydrateFromStorage();
   const routeCode = extractSessionCode(currentCode.value);
@@ -573,6 +588,7 @@ p {
 }
 
 .playing-layout.card {
+  position: relative;
   padding: 0;
   gap: 2px;
   border: none;
@@ -580,6 +596,42 @@ p {
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.close-game-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.78);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.close-icon-line {
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.close-icon-line-a {
+  transform: rotate(45deg);
+}
+
+.close-icon-line-b {
+  transform: rotate(-45deg);
 }
 
 .tiles-grid {
@@ -977,14 +1029,26 @@ p {
   .playing-layout {
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr) auto;
-    max-height: calc(100dvh - 14px);
+    max-height: 100dvh;
     overflow: hidden;
     gap: 2px;
-    padding: 2px;
+    padding: 2px 2px 1px;
   }
 
   .playing-layout.card {
-    padding: 2px;
+    padding: 2px 2px 1px;
+  }
+
+  .close-game-btn {
+    top: 2px;
+    right: 2px;
+    width: 21px;
+    height: 21px;
+  }
+
+  .close-icon-line {
+    width: 10px;
+    height: 1.8px;
   }
 
   .reference-board {
@@ -1050,9 +1114,19 @@ p {
 
 @media (max-width: 900px) and (orientation: landscape) and (max-height: 430px) {
   .playing-layout {
-    max-height: calc(100dvh - 8px);
+    max-height: 100dvh;
     gap: 2px;
     padding: 1px;
+  }
+
+  .close-game-btn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .close-icon-line {
+    width: 9px;
+    height: 1.6px;
   }
 
   .tile-card {
@@ -1097,7 +1171,7 @@ p {
 
 @media (max-width: 900px) and (orientation: landscape) and (min-height: 431px) and (max-height: 520px) {
   .playing-layout {
-    max-height: calc(100dvh - 10px);
+    max-height: 100dvh;
     gap: 5px;
   }
 
@@ -1129,7 +1203,7 @@ p {
 
 @media (max-width: 900px) and (orientation: landscape) and (min-height: 521px) {
   .playing-layout {
-    max-height: calc(100dvh - 12px);
+    max-height: 100dvh;
   }
 }
 
